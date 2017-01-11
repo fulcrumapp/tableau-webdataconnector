@@ -46,7 +46,7 @@
           </div>
         </div>
         <p class="pull-right">
-          <button type="button" id="submitButton" class="btn btn-primary" disabled>Get Data</button>
+          <button type="button" id="submitButton" class="btn btn-primary">Get Data</button>
         </p>
       </div>
       <div class="panel-footer small text-muted">
@@ -131,13 +131,6 @@
 
     // Create event listeners for when the user submits the form
     $(document).ready(function() {
-
-      $("#dataShareURL").keyup(function() {
-        if ($("#dataShareURL").val().includes("https://web.fulcrumapp.com/shares/") ) {
-          $("#submitButton").prop("disabled", false);
-        }
-      });
-
       $("#submitButton").click(function() {
         var data = {
           url: $("#dataShareURL").val()
