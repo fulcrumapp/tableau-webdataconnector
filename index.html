@@ -1,0 +1,153 @@
+<html>
+<head>
+  <title>Fulcrum WDC</title>
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      padding: 40px;
+    }
+    .tab-content {
+      padding: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="panel panel-primary">
+      <div class="panel-heading">
+        <h3 class="panel-title">Fulcrum Tableau Web Data Connector</h3>
+      </div>
+      <div class="panel-body">
+        <div class="row">
+          <div class="col-md-12">
+            <div>
+              <ul class="nav nav-tabs" role="tablist">
+                <li role="presentation" class="active"><a href="#dataShare" aria-controls="dataShare" role="tab" data-toggle="tab">Data Share</a></li>
+                <li role="presentation" class="disabled"><a href="#queryAPI" aria-controls="profile" role="tab">Query API</a></li>
+              </ul>
+              <div class="tab-content">
+                <div role="tabpanel" class="tab-pane active" id="dataShare">
+                  <form class="form-horizontal">
+                    <div class="form-group">
+                      <div class="col-xs-3 control-label">
+                        <center>Data Share URL:</center>
+                      </div>
+                      <div class="col-xs-9">
+                        <input type="text" class="form-control" id="dataShareURL" placeholder="GeoJSON or CSV URL">
+                      </div>
+                    </div>
+                  </form>
+                </div>
+                <div role="tabpanel" class="tab-pane" id="queryAPI">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="pull-right">
+          <button type="button" id="submitButton" class="btn btn-primary" disabled>Get Data</button>
+        </p>
+      </div>
+      <div class="panel-footer small text-muted">
+        Built with &#9749; by <a href="http://fulcrumapp.com">Fulcrum</a>
+        <span class="pull-right"><a href="https://github.com/fulcrumapp/tableau-webdataconnector">Source code</a></span>
+      </div>
+    </div>
+  </div>
+  <script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/4.1.2/papaparse.min.js"></script>
+  <script src="https://connectors.tableau.com/libs/tableauwdc-2.1.latest.js"></script>
+  <script>
+  (function() {
+    // Create the connector object
+    var myConnector = tableau.makeConnector();
+
+    // Define the schema
+    myConnector.getSchema = function(schemaCallback) {
+
+      var url = JSON.parse(tableau.connectionData).url;
+      var columns = [];
+
+      // Fetch a single record to get the schema (always fetch CSV)
+      Papa.parse(url.replace("geojson", "csv") + "?per_page=1", {
+        download: true,
+        skipEmptyLines: true,
+        header: true,
+        dynamicTyping: true,
+        complete: function(results) {
+          var obj = results.data[0];
+          for (var prop in obj) {
+            if (obj.hasOwnProperty(prop)) {
+              var type;
+              if (typeof obj[prop] == "number") {
+                if (obj[prop] % 1 === 0) {
+                  type = "int";
+                } else {
+                  type = "float";
+                }
+              } else {
+                type = "string";
+              }
+              columns.push({
+                id: prop,
+                dataType: type
+              });
+            }
+          }
+
+          var tableSchema = {
+            id: "fulcrumFeed",
+            alias: "Fulcrum data",
+            columns: columns
+          };
+
+          schemaCallback([tableSchema]);
+        }
+      });
+    };
+
+    // Set the data
+    myConnector.getData = function(table, doneCallback) {
+
+      var url = JSON.parse(tableau.connectionData).url;
+      var features = [];
+
+      // Always fetch CSV
+      Papa.parse(url.replace("geojson", "csv"), {
+        download: true,
+        skipEmptyLines: true,
+        header: true,
+        dynamicTyping: true,
+        complete: function(results) {
+          table.appendRows(results.data);
+          doneCallback();
+        }
+      });
+    };
+
+    tableau.registerConnector(myConnector);
+
+    // Create event listeners for when the user submits the form
+    $(document).ready(function() {
+
+      $("#dataShareURL").keyup(function() {
+        if ($("#dataShareURL").val().includes("https://web.fulcrumapp.com/shares/") ) {
+          $("#submitButton").prop("disabled", false);
+        }
+      });
+
+      $("#submitButton").click(function() {
+        var data = {
+          url: $("#dataShareURL").val()
+        };
+        tableau.connectionData = JSON.stringify(data);
+        tableau.connectionName = "Fulcrum"; // This will be the data source name in Tableau
+        tableau.submit(); // This sends the connector object to Tableau
+      });
+    });
+  })();
+  </script>
+</body>
+</html>
