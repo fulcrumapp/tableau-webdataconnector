@@ -1,146 +1,72 @@
-<html>
-<head>
-  <title>Fulcrum WDC</title>
-  <meta http-equiv="Cache-Control" content="no-store" />
-  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      padding: 40px;
-    }
-    .tab-content {
-      padding: 12px;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="panel panel-primary">
-      <div class="panel-heading">
-        <h3 class="panel-title">Fulcrum Tableau Web Data Connector</h3>
-      </div>
-      <div class="panel-body">
-        <div class="row">
-          <div class="col-md-12">
-            <div>
-              <ul class="nav nav-tabs" role="tablist">
-                <li role="presentation" class="active"><a href="#dataShare" aria-controls="dataShare" role="tab" data-toggle="tab">Data Share</a></li>
-                <li role="presentation" class="disabled"><a href="#queryAPI" aria-controls="profile" role="tab">Query API</a></li>
-              </ul>
-              <div class="tab-content">
-                <div role="tabpanel" class="tab-pane active" id="dataShare">
-                  <form class="form-horizontal">
-                    <div class="form-group">
-                      <div class="col-xs-3 control-label">
-                        <center>Data Share URL:</center>
-                      </div>
-                      <div class="col-xs-9">
-                        <input type="text" class="form-control" id="dataShareURL" placeholder="GeoJSON or CSV URL">
-                      </div>
-                    </div>
-                  </form>
-                </div>
-                <div role="tabpanel" class="tab-pane" id="queryAPI">
+<!doctype html>
+<html lang="en">
+    <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Cache-Control" content="no-store">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Tableau Web Data Connector for Fulcrum">
+    <meta name="author" content="Bryan McBride">
+    <title>Fulcrum Tableau WDC</title>
+    <link rel="shortcut icon" type="image/x-icon" href="assets/img/favicon.ico">
+    <link rel="stylesheet" href="assets/vendor/bootstrap-4.3.1/css/bootstrap.min.css">
+  </head>
+  <body>
+    <div class="container-fluid">
+      <div class="card mt-3 mb-3">
+        <div class="card-header d-flex align-items-center justify-content-center">
+          <img src="assets/img/fulcrum-logo-standard.png" height="26px">
+          <span class="ml-auto"><img src="assets/img/tableau-logo.png" class="pr-1" height="26px">Web Data Connector</span>
+        </div>
+        <div class="card-body">
+          <form id="input-form" class="needs-validation" novalidate autocomplete="off">
+            <div class="form-group">
+              <label for="source">Source</label>
+              <select class="custom-select" id="source">
+                <option value="share" selected>Data Share</option>
+                <option value="qapi">Query API</option>
+              </select>
+            </div>
+            <div id="share-inputs">
+              <div class="form-group">
+                <label for="share">Data Share Token</label>
+                <input type="text" class="form-control" id="share" placeholder="Just the ID" pattern="[a-fA-F0-9]{16}" autocomplete="off" required>
+                <div class="invalid-feedback">
+                  16 character token is required!
                 </div>
               </div>
             </div>
-          </div>
+            <div id="qapi-inputs" style="display: none;">
+              <div class="form-group">
+                <label for="token">API Token</label>
+                <input type="password" class="form-control" id="token" autocomplete="off">
+                <div class="invalid-feedback">
+                  Token is required!
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="query">SQL Query</label>
+                <textarea class="form-control" id="query" rows="5" placeholder='SELECT * FROM "inspections"' autocomplete="off"></textarea>
+                <div class="invalid-feedback">
+                  Query is required!
+                </div>
+              </div>
+            </div>
+            <div class="d-flex">
+              <small class="text-muted font-italic font-weight-light pt-3">Connection data will be saved for convenience. Use caution when sharing!</small>
+              <button type="submit" id="getDataBtn" class="btn btn-primary ml-auto">Get Data</button>
+            </div>
+          </form>
         </div>
-        <p class="pull-right">
-          <button type="button" id="submitButton" class="btn btn-primary">Get Data</button>
-        </p>
+        <div class="card-footer small text-muted d-flex">
+          Developed by&nbsp;<a href="https://spatialnetworks.com" target="_blank">Spatial Networks, Inc.</a>
+          <span class="ml-auto"><a href="https://github.com/fulcrumapp/tableau-webdataconnector">Source code</a></span>
+        </div>
       </div>
-      <div class="panel-footer small text-muted">
-        Built with &#9749; by <a href="http://fulcrumapp.com">Fulcrum</a>
-        <span class="pull-right"><a href="https://github.com/fulcrumapp/tableau-webdataconnector">Source code</a></span>
-      </div>
-    </div>
-  </div>
-  <script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/4.1.2/papaparse.min.js"></script>
-  <script src="https://connectors.tableau.com/libs/tableauwdc-2.1.latest.js"></script>
-  <script>
-  (function() {
-    // Create the connector object
-    var myConnector = tableau.makeConnector();
 
-    // Define the schema
-    myConnector.getSchema = function(schemaCallback) {
-
-      var url = JSON.parse(tableau.connectionData).url;
-      var columns = [];
-
-      // Fetch a single record to get the schema (always fetch CSV)
-      Papa.parse(url.replace("geojson", "csv") + "?per_page=1", {
-        download: true,
-        skipEmptyLines: true,
-        header: true,
-        dynamicTyping: true,
-        complete: function(results) {
-          var obj = results.data[0];
-          for (var prop in obj) {
-            if (obj.hasOwnProperty(prop)) {
-              var type;
-              if (typeof obj[prop] == "number") {
-                if (obj[prop] % 1 === 0) {
-                  type = "int";
-                } else {
-                  type = "float";
-                }
-              } else {
-                type = "string";
-              }
-              columns.push({
-                id: prop,
-                dataType: type
-              });
-            }
-          }
-
-          var tableSchema = {
-            id: "fulcrumFeed",
-            alias: "Fulcrum data",
-            columns: columns
-          };
-
-          schemaCallback([tableSchema]);
-        }
-      });
-    };
-
-    // Set the data
-    myConnector.getData = function(table, doneCallback) {
-
-      var url = JSON.parse(tableau.connectionData).url;
-      var features = [];
-
-      // Always fetch CSV
-      Papa.parse(url.replace("geojson", "csv"), {
-        download: true,
-        skipEmptyLines: true,
-        header: true,
-        dynamicTyping: true,
-        complete: function(results) {
-          table.appendRows(results.data);
-          doneCallback();
-        }
-      });
-    };
-
-    tableau.registerConnector(myConnector);
-
-    // Create event listeners for when the user submits the form
-    $(document).ready(function() {
-      $("#submitButton").click(function() {
-        var data = {
-          url: $("#dataShareURL").val()
-        };
-        tableau.connectionData = JSON.stringify(data);
-        tableau.connectionName = "Fulcrum"; // This will be the data source name in Tableau
-        tableau.submit(); // This sends the connector object to Tableau
-      });
-    });
-  })();
-  </script>
-</body>
+    <script src="assets/vendor/jquery/jquery-3.4.1.min.js"></script>
+    <script src="assets/vendor/popper.js-1.15.0/umd/popper.min.js"></script>
+    <script src="assets/vendor/bootstrap-4.3.1/js/bootstrap.min.js"></script>
+    <script src="assets/vendor/tableauwdc/tableauwdc-2.3.1.min.js"></script>
+    <script src="assets/js/fulcrum-wdc.js"></script>
+  </body>
 </html>
