@@ -111,6 +111,9 @@
                 }
               } else if (key == "created_at" || key == "updated_at" || key == "system_created_at" || key == "system_updated_at") {
                 type = tableau.dataTypeEnum.datetime;
+              } else if (key == "marker-color") {
+                key = "marker_color";
+                type = tableau.dataTypeEnum.string;
               } else {
                 type = tableau.dataTypeEnum.string;
               }
@@ -133,6 +136,10 @@
             feature.properties["updated_at"] = feature.properties["updated_at"].replace(" UTC", "");
             feature.properties["system_created_at"] = feature.properties["system_created_at"].replace(" UTC", "");
             feature.properties["system_updated_at"] = feature.properties["system_updated_at"].replace(" UTC", "");
+            if (feature.properties["marker-color"]) {
+              feature.properties["marker_color"] = feature.properties["marker-color"];
+              delete feature.properties["marker-color"];
+            }
             rows.push(feature.properties);
           });
 
